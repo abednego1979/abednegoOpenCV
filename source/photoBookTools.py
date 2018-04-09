@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-#Python 2.7.x
+#Python 3.6.x
 #V0.01
 
 
@@ -174,53 +174,57 @@ def foo(fileList, blankScale=0.03, outFileProfix="proc_"):
     for pic in fileList:
         print ("Proc:"+pic)
         img = cv2.imread(pic)  
-
-        res=[]
-        for index in range(-5, 6):
-            angle=index*0.1
-            #print ("angle:"+str(angle))
-            rImg=revolveImage(img, angle)
-            img_det,max_box = detect(rImg)
-            width=max(max_box[:,0])-min(max_box[:,0])
-            res.append((width, angle, max_box))
-            #showImage(img_det)
+        
+        try:
+            res=[]
+            for index in range(-5, 6):
+                angle=index*0.1
+                #print ("angle:"+str(angle))
+                rImg=revolveImage(img, angle)
+                img_det,max_box = detect(rImg)
+                width=max(max_box[:,0])-min(max_box[:,0])
+                res.append((width, angle, max_box))
+                #showImage(img_det)
+                
             
+            res = sorted(res, key=lambda x: x[0])
+            #print (res)
         
-        res = sorted(res, key=lambda x: x[0])
-        #print (res)
-    
-        #print ("Right Angle:"+str(res[0][1]))
+            #print ("Right Angle:"+str(res[0][1]))
+            
+            #旋转到最佳位置
+            rImg=revolveImage(img, res[0][1])
+            
+            #writeImage('proc_003_temp01.jpg', rImg)
+            
+            #将max_box扩大一些白边
+            max_box=res[0][2]
+            width=max(max_box[:,0])-min(max_box[:,0])
+            height=max(max_box[:,1])-min(max_box[:,1])
+            min_x=min(max_box[:,0])-int(blankScale*width)
+            max_x=max(max_box[:,0])+int(blankScale*width)
+            min_y=min(max_box[:,1])-int(blankScale*height)
+            max_y = int((max_x-min_x)/3.0)*4+min_y
+            max_box=np.array([[min_x, max_y], [min_x, min_y], [max_x, min_y], [max_x, max_y]])
+            
+            cv2.drawContours(rImg, [max_box], 0, (0, 255, 0), 2)
+            #writeImage('proc_003_temp02.jpg', rImg)
+            
+            #取出选好的内容
+            new_img = rImg[min_y:max_y, min_x:max_x, :]
+            
+            #缩放到标准大小
+            new_img = zoomImage(new_img, scale=1.0*2048/new_img.shape[0])
+            
+            #锐化
+            new_img = sharpImage(new_img)
+            
+            #保存
+            new_fileName=outFileProfix+pic
+            writeImage(new_fileName, new_img)
         
-        #旋转到最佳位置
-        rImg=revolveImage(img, res[0][1])
-        
-        #writeImage('proc_003_temp01.jpg', rImg)
-        
-        #将max_box扩大一些白边
-        max_box=res[0][2]
-        width=max(max_box[:,0])-min(max_box[:,0])
-        height=max(max_box[:,1])-min(max_box[:,1])
-        min_x=min(max_box[:,0])-int(blankScale*width)
-        max_x=max(max_box[:,0])+int(blankScale*width)
-        min_y=min(max_box[:,1])-int(blankScale*height)
-        max_y = int((max_x-min_x)/3.0)*4+min_y
-        max_box=np.array([[min_x, max_y], [min_x, min_y], [max_x, min_y], [max_x, max_y]])
-        
-        cv2.drawContours(rImg, [max_box], 0, (0, 255, 0), 2)
-        #writeImage('proc_003_temp02.jpg', rImg)
-        
-        #取出选好的内容
-        new_img = rImg[min_y:max_y, min_x:max_x, :]
-        
-        #缩放到标准大小
-        new_img = zoomImage(new_img, scale=1.0*2048/new_img.shape[0])
-        
-        #锐化
-        new_img = sharpImage(new_img)
-        
-        #保存
-        new_fileName=outFileProfix+pic
-        writeImage(new_fileName, new_img)
+        except:
+            print ("Proc Error:"+pic)
         
     print ("Proc Over")
     
