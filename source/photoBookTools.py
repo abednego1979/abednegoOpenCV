@@ -49,187 +49,183 @@ def revolveImage(img, angle):
 
 #图像缩放
 def zoomImage(img, scale=1.0):
-    return cv2.resize(img, (int(img.shape[1]*scale), int(img.shape[0]*scale)), interpolation=cv2.INTER_CUBIC)
+    if type(scale)==type(1.0):
+        return cv2.resize(img, (int(img.shape[1]*scale), int(img.shape[0]*scale)), interpolation=cv2.INTER_CUBIC)
+    else:
+        return cv2.resize(img, (scale[1], scale[0]), interpolation=cv2.INTER_CUBIC)
 
 #图像锐化
 def sharpImage(img, kernel=np.array([[0, -1, 0],[-1, 5, -1],[0, -1, 0]])):
     return cv2.filter2D(img, -1, kernel)
 
+#对一个图像，通过画框的方式，人工圈定一个区域，并取得这个区域的坐标范围。为后继的切割等操作提供参数
+def getRealImageRange(img, unSelFieldColour='GRAY', showScale=1.0, preAngle=0):
+    procImg=img.copy()
     
-def preprocess(gray):  
-    # 1. Sobel算子，x方向求梯度  
-    sobel = cv2.Sobel(gray, cv2.CV_8U, 1, 0, ksize = 3)  
-    # 2. 二值化  
-    ret, binary = cv2.threshold(sobel, 0, 255, cv2.THRESH_OTSU+cv2.THRESH_BINARY)  
-  
-    # 3. 膨胀和腐蚀操作的核函数  
-    element1 = cv2.getStructuringElement(cv2.MORPH_RECT, (30, 9))  
-    element2 = cv2.getStructuringElement(cv2.MORPH_RECT, (24, 6))  
-  
-    # 4. 膨胀一次，让轮廓突出  
-    dilation = cv2.dilate(binary, element2, iterations = 1)  
-  
-    # 5. 腐蚀一次，去掉细节，如表格线等。注意这里去掉的是竖直的线  
-    erosion = cv2.erode(dilation, element1, iterations = 1)  
-  
-    # 6. 再次膨胀，让轮廓明显一些  
-    dilation2 = cv2.dilate(erosion, element2, iterations = 3)  
-  
-    # 7. 存储中间图片   
-    #cv2.imwrite("binary.png", binary)  
-    #cv2.imwrite("dilation.png", dilation)  
-    #cv2.imwrite("erosion.png", erosion)  
-    #cv2.imwrite("dilation2.png", dilation2)  
-  
-    return dilation2  
-
-
-def findTextRegion(img):  
-    region = []  
-  
-    # 1. 查找轮廓  
-    binary, contours, hierarchy = cv2.findContours(img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)  
-  
-    # 2. 筛选那些面积小的  
-    for i in range(len(contours)):  
-        cnt = contours[i]  
-        # 计算该轮廓的面积  
-        area = cv2.contourArea(cnt)   
-  
-        # 面积小的都筛选掉  
-        if(area < 1000):  
-            continue  
-  
-        # 轮廓近似，作用很小  
-        epsilon = 0.001 * cv2.arcLength(cnt, True)  
-        approx = cv2.approxPolyDP(cnt, epsilon, True)  
-  
-        # 找到最小的矩形，该矩形可能有方向  
-        rect = cv2.minAreaRect(cnt)  
-        #print ("rect is: ",rect)  
-          
-  
-        # box是四个点的坐标  
-        box = cv2.boxPoints(rect)  
-        box = np.int0(box)  
-  
-        # 计算高和宽  
-        height = abs(box[0][1] - box[2][1])  
-        width = abs(box[0][0] - box[2][0])  
-  
-        # 筛选那些太细的矩形，留下扁的  
-        if(height > width * 1.2):  
-            continue  
-  
-        region.append(box)  
-  
-    return region
-
-
-#识别文本区域
-def detect(img):  
-    # 1.  转化成灰度图  
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)  
-  
-    # 2. 形态学变换的预处理，得到可以查找矩形的图片  
-    dilation = preprocess(gray)  
-  
-    # 3. 查找和筛选文字区域  
-    region = findTextRegion(dilation)  
+    #先按照设定的角度旋转图像
+    procImg = revolveImage(procImg, preAngle)
     
-    #找出文字部分的最大范围
-    try:
-        #x是横向，y是纵向
-        min_x=min(region[0][:,0])
-        max_x=max(region[0][:,0])
-        min_y=min(region[0][:,1])
-        max_y=max(region[0][:,1])
-        for box in region:
-            min_x=min(min(box[:,0]), min_x)
-            max_x=max(max(box[:,0]), max_x)
-            min_y=min(min(box[:,1]), min_y)
-            max_y=max(max(box[:,1]), max_y)
-            
-        #调正x-y比例为3：4
-        max_y = int((max_x-min_x)/3.0)*4+min_y
-        
-        max_box=np.array([[min_x, max_y], [min_x, min_y], [max_x, min_y], [max_x, max_y]])
-        #print ("Max Box:")
-        #print (max_box)
-        region.append(max_box)
-        
-        #cv2.drawContours(img, [max_box], 0, (0, 255, 0), 2)
-    except:
-        pass
     
-    # 4. 用绿线画出这些找到的轮廓  
-    #for box in region:  
-        #cv2.drawContours(img, [box], 0, (0, 255, 0), 2)
+    maxRect_High=procImg.shape[0]
+    maxRect_Wide=procImg.shape[1]
+    selRect_up=int(maxRect_High/4)
+    selRect_down=int(3*maxRect_High/4)
+    selRect_left=int(maxRect_Wide/4)
+    selRect_right=int(3*maxRect_Wide/4)
+    step=max(int(min(maxRect_High, maxRect_Wide)/200)*2, 2)
+    halfStep=int(step/2)
+    
+    picRevolve=0    #图像旋转角度
+    
+    unSelColourDic={'RED':[0,0,1], 'YELLOW':[0,1,0], 'BLUE':[1,0,0], 'WHITE':[1,1,1], 'BLACK':[0,0,0]}
 
-    return img, max_box
+    while True:
+        #先按照设定的角度旋转图像
+        tempProcImg = revolveImage(procImg, picRevolve)
+        
+        #防止由于旋转而导致选择框出界
+        maxRect_High=tempProcImg.shape[0]
+        maxRect_Wide=tempProcImg.shape[1]        
+        selRect_down=min(selRect_down, tempProcImg.shape[0])
+        selRect_right=min(selRect_right, tempProcImg.shape[1])
+        selRect_up=min(selRect_up, selRect_down)
+        selRect_left=min(selRect_left, selRect_right)
+        
+        
+        if unSelFieldColour in unSelColourDic.keys():
+            colourImg=np.zeros(tempProcImg.shape, np.uint8)
+            for index,i in enumerate(unSelColourDic[unSelFieldColour]):
+                if i:
+                    colourImg[...,index]=np.ones(tempProcImg.shape[:2])*255
+                else:
+                    colourImg[...,index]=np.zeros(tempProcImg.shape[:2])
+            showImg=colourImg
+        elif unSelFieldColour=='GRAY':
+            grayImg = cv2.cvtColor(tempProcImg,cv2.COLOR_BGR2GRAY)
+        
+            #由于灰度图是降维的，这里要合并图像所以要升维，将灰度图变为彩色图
+            grayImg = grayImg[..., np.newaxis]
+            grayImg=np.concatenate((grayImg,grayImg,grayImg), axis=2)
+            
+            showImg=grayImg
+        else:
+            assert 0, "input unSelFieldColour is error"
+        
+        #替换区域为原彩色图
+        showImg[selRect_up:selRect_down,selRect_left:selRect_right,:] = tempProcImg[selRect_up:selRect_down,selRect_left:selRect_right,:]
+        box=np.array([[selRect_left, selRect_down], [selRect_left, selRect_up], [selRect_right, selRect_up], [selRect_right, selRect_down]])
+        cv2.drawContours(showImg, [box], 0, (255, 0, 0), 2)
+        
+        #show grayImg        
+        #根据键盘输入决定选择框的
+        if 0.0==showScale:
+            cv2.namedWindow("image", cv2.WINDOW_NORMAL)
+            cv2.imshow('image',showImg)
+        else:
+            cv2.imshow('image',zoomImage(showImg, scale=showScale))
+        key=cv2.waitKey(0)
+        
+        if key == ord('w'):  #'w' move up the select rect
+            if selRect_up >= step:
+                selRect_up-=step
+                selRect_down-=step
+            else:
+                selRect_down-=selRect_up
+                selRect_up=0
+            pass
+        elif key == ord('s'):  #'s' move down the select rect
+            if selRect_down+step <= maxRect_High:
+                selRect_up+=step
+                selRect_down+=step
+            else:
+                selRect_up+=(maxRect_High-selRect_down)
+                selRect_down=maxRect_High
+            pass
+        elif key == ord('a'):  #'s' move left the select rect
+            if selRect_left >= step:
+                selRect_left-=step
+                selRect_right-=step
+            else:
+                selRect_right-=selRect_left
+                selRect_left=0
+            pass
+        elif key == ord('d'):  #'s' move right the select rect
+            if selRect_right+step <= maxRect_Wide:
+                selRect_left+=step
+                selRect_right+=step
+            else:
+                selRect_left+=(maxRect_Wide-selRect_right)
+                selRect_right=maxRect_Wide
+            pass
+        elif key == ord(','):  #',' zoom out (smaller) the select rect, up and down
+            selRect_up = selRect_up+halfStep if (selRect_down-selRect_up)>step else selRect_up
+            selRect_down = selRect_down-halfStep if (selRect_down-selRect_up)>step else selRect_down
+            pass
+        elif key == ord('.'):  #'.' zoom in (bigger) the select rect, up and down
+            selRect_up=max(0, selRect_up-halfStep)
+            selRect_down=min(maxRect_High, selRect_down+halfStep)
+            pass
+        elif key == ord('n'):  #',' zoom out (smaller) the select rect, left and right
+            selRect_left = selRect_left+halfStep if (selRect_right-selRect_left)>step else selRect_up
+            selRect_right = selRect_right-halfStep if (selRect_right-selRect_left)>step else selRect_right                       
+            pass
+        elif key == ord('m'):  #',' zoom out (smaller) the select rect, left and right
+            selRect_left=max(0, selRect_left-halfStep)
+            selRect_right=min(maxRect_Wide, selRect_right+halfStep)            
+            pass
+        elif key == ord('i'):  #'i' to turn left the picture
+            picRevolve-=0.1
+            pass
+        elif key == ord('o'):  #'o' to turn right the picture
+            picRevolve+=0.1
+            pass
+        elif key == ord('y'):  #'y' to ok
+            cv2.destroyAllWindows()
+            break
+        else:
+            pass
+        
+        #print [picRevolve, selRect_up, selRect_down-selRect_up, selRect_left, selRect_right-selRect_left]
+        
+    return (picRevolve+preAngle, selRect_up, selRect_down, selRect_left, selRect_right)
 
-
-#blankScale:有字区域向外扩展的白边量的比例
-def foo(fileList, blankScale=0.03, outFileProfix="proc_"):    
-    for pic in fileList:
-        print ("Proc:"+pic)
-        img = cv2.imread(pic)  
-        
-        try:
-            res=[]
-            for index in range(-5, 6):
-                angle=index*0.1
-                #print ("angle:"+str(angle))
-                rImg=revolveImage(img, angle)
-                img_det,max_box = detect(rImg)
-                width=max(max_box[:,0])-min(max_box[:,0])
-                res.append((width, angle, max_box))
-                #showImage(img_det)
-                
-            
-            res = sorted(res, key=lambda x: x[0])
-            #print (res)
-        
-            #print ("Right Angle:"+str(res[0][1]))
-            
-            #旋转到最佳位置
-            rImg=revolveImage(img, res[0][1])
-            
-            #writeImage('proc_003_temp01.jpg', rImg)
-            
-            #将max_box扩大一些白边
-            max_box=res[0][2]
-            width=max(max_box[:,0])-min(max_box[:,0])
-            height=max(max_box[:,1])-min(max_box[:,1])
-            min_x=min(max_box[:,0])-int(blankScale*width)
-            max_x=max(max_box[:,0])+int(blankScale*width)
-            min_y=min(max_box[:,1])-int(blankScale*height)
-            max_y = int((max_x-min_x)/3.0)*4+min_y
-            max_box=np.array([[min_x, max_y], [min_x, min_y], [max_x, min_y], [max_x, max_y]])
-            
-            cv2.drawContours(rImg, [max_box], 0, (0, 255, 0), 2)
-            #writeImage('proc_003_temp02.jpg', rImg)
-            
-            #取出选好的内容
-            new_img = rImg[min_y:max_y, min_x:max_x, :]
-            
-            #缩放到标准大小
-            new_img = zoomImage(new_img, scale=1.0*2048/new_img.shape[0])
-            
-            #锐化
-            new_img = sharpImage(new_img)
-            
-            #保存
-            new_fileName=outFileProfix+pic
-            writeImage(new_fileName, new_img)
-        
-        except:
-            print ("Proc Error:"+pic)
-        
-    print ("Proc Over")
+#选择图像的一部分
+def selImagePart(img, angle, rect):
+    #对图像转过angle角度
+    tempProcImg = revolveImage(img, angle)
+    objImg = tempProcImg[rect[0]:rect[1], rect[2]:rect[3], :]
+    return objImg
     
 
-if __name__ == '__main__':
-    fileList=['003.jpg', '004.jpg', '005.jpg']
-    foo(fileList)
 
+
+
+def foo(fileList, examplePic):
+    img=readImage(examplePic)
+    
+    
+    if 1:
+        selRect=(2.7755575615628914e-17, 575, 3825, 315, 2745)
+    else:
+        selRect=getRealImageRange(img, unSelFieldColour='GRAY', showScale=0.0, preAngle=0)
+    print selRect
+    
+    while True:
+        x=raw_input("continue to proc?(Y/n)")
+        if 'n'==x.lower():
+            break
+        elif 'y'==x.lower():
+            for picFile in picFiles:
+                print "Proc:"+picFile
+                img=readImage(picFile)
+                outImg=sharpImage(selImagePart(img, selRect[0], selRect[1:]))
+                outImg=zoomImage(outImg, scale=(2048,1536))
+                outImg = cv2.cvtColor(outImg,cv2.COLOR_BGR2GRAY)
+                writeImage('proc_'+picFile, outImg)
+            break
+        else:
+            pass
+        
+picFiles=['003.jpg', '005.jpg', '007.jpg']
+examplePic='003.jpg'        
+foo(picFiles, examplePic)
