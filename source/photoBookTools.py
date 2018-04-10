@@ -185,7 +185,7 @@ def getRealImageRange(img, unSelFieldColour='GRAY', showScale=1.0, preAngle=0):
         else:
             pass
         
-        #print [picRevolve, selRect_up, selRect_down-selRect_up, selRect_left, selRect_right-selRect_left]
+        #print ([picRevolve, selRect_up, selRect_down-selRect_up, selRect_left, selRect_right-selRect_left])
         
     return (picRevolve+preAngle, selRect_up, selRect_down, selRect_left, selRect_right)
 
@@ -205,18 +205,20 @@ def foo(fileList, examplePic):
     
     
     if 1:
-        selRect=(2.7755575615628914e-17, 575, 3825, 315, 2745)
+        #奇数页(2.7755575615628914e-17, 555, 3845, 285, 2745)
+        #偶数页(1.0999999999999999, 600, 3890, 390, 2850)
+        selRect=(1.0999999999999999, 600, 3890, 390, 2850)
     else:
         selRect=getRealImageRange(img, unSelFieldColour='GRAY', showScale=0.0, preAngle=0)
-    print selRect
+    print (selRect)
     
     while True:
-        x=raw_input("continue to proc?(Y/n)")
+        x=input("continue to proc?(Y/n)")
         if 'n'==x.lower():
             break
         elif 'y'==x.lower():
             for picFile in picFiles:
-                print "Proc:"+picFile
+                print ("Proc:"+picFile)
                 img=readImage(picFile)
                 outImg=sharpImage(selImagePart(img, selRect[0], selRect[1:]))
                 outImg=zoomImage(outImg, scale=(2048,1536))
@@ -226,6 +228,6 @@ def foo(fileList, examplePic):
         else:
             pass
         
-picFiles=['003.jpg', '005.jpg', '007.jpg']
-examplePic='003.jpg'        
+picFiles=["02.jpg", "04.jpg", "06.jpg", "08.jpg"]
+examplePic='026.jpg'        
 foo(picFiles, examplePic)
