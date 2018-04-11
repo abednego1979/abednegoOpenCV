@@ -13,8 +13,9 @@ def readImage(picName):
     img = cv2.imread(picName,cv2.IMREAD_UNCHANGED)
     return img
 
-def showImage(img, showTime=0):
-    cv2.namedWindow("img", cv2.WINDOW_NORMAL)
+def showImage(img, showTime=0, style=''):
+    if not style:
+        cv2.namedWindow("img", cv2.WINDOW_NORMAL)
     cv2.imshow('img',img)
     cv2.waitKey(showTime)
     cv2.destroyAllWindows()
