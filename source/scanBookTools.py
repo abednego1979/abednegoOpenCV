@@ -29,12 +29,7 @@ def writeImage(picName, img):
         assert 0,"Output picture name postfix error!"
     return
 
-#扫描后的文档图片，需要
-#1.裁剪，这需要鼠标选择有效区域
-#2.旋转摆正
 
-picFiles=["feng1.jpg", "feng2.jpg", "feng4.jpg", "IMG_001.jpg", "IMG_002.jpg", "IMG_003.jpg"]
-examplePic='feng1.jpg'
 
 
 
@@ -43,8 +38,8 @@ def getXYofValidImage(picName):
 
     length_width_ratio=0.75
     
-    y=img.shape[0]/2    #纵向
-    x=img.shape[1]/2    #横向
+    y=int(img.shape[0]/2)    #纵向
+    x=int(img.shape[1]/2)    #横向
     
     step=[1,10,100]
     step_index=2
@@ -53,7 +48,7 @@ def getXYofValidImage(picName):
     while True:
         img_draw=img.copy()
         cv2.rectangle(img_draw, (0, 0), (x, y), (255,255,0), 3)
-        cv2.putText(img_draw,'step:%d' % step[step_index],(img.shape[1]/2,img.shape[0]/2),cv2.FONT_HERSHEY_COMPLEX,3,(0,0,0),5)
+        cv2.putText(img_draw,'step:%d' % step[step_index],(int(img.shape[1]/2),int(img.shape[0]/2)),cv2.FONT_HERSHEY_COMPLEX,3,(0,0,0),5)
         
         cv2.imshow('img',img_draw)
         cv2.waitKey(100)
@@ -75,9 +70,9 @@ def getXYofValidImage(picName):
             y=min(y,img.shape[0])
         if key == ord('e'):
             step_index=(step_index+1)%len(step)
+        
+        print ("(%d, %d)" % (x,y))
     
-    
-    #print ("(%d, %d)" % (x,y))
     cv2.destroyAllWindows()
     return (x,y)
 
@@ -90,12 +85,33 @@ def batchProcPic(picList, x, y, prefix='proc_'):
         
     pass
 
+def turnUpDown(img):
+    return np.rot90(np.rot90(img))
 
-x,y=getXYofValidImage(examplePic)
-print ("(%d, %d)" % (x,y))
+#扫描后的文档图片，需要
+#1.裁剪，这需要鼠标选择有效区域
+#2.旋转摆正
 
-r=raw_input("batch?(Y/n)")
-if 'y'==r.lower():
-    batchProcPic(picFiles, x, y)
+if True:
+    picFiles=[]
+    examplePic='feng2.jpg'
+    
+    
+    x,y=getXYofValidImage(examplePic)
+    print ("(%d, %d)" % (x,y))
+    
+    r=input("batch?(Y/n)")
+    if 'y'==r.lower():
+        batchProcPic(picFiles, x, y)
+else:
+    for i in range(72):
+        temp_d=2*i+1
+        fileString='proc_%03d.jpg' % temp_d
+        
+        print ("Proc:"+fileString)
+        img=readImage(fileString)
+        img=turnUpDown(img)
+        writeImage(fileString, img)
+    
 
 
