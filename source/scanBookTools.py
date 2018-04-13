@@ -76,7 +76,7 @@ def getXYofValidImage(picName):
     cv2.destroyAllWindows()
     return (x,y)
 
-def batchProcPic(picList, x, y, prefix='proc_'):
+def batchProcPic(picList, x, y, prefix='_'):
     for picFile in picList:
         print ("Proc:"+picFile)
         img=readImage(picFile)
@@ -88,30 +88,34 @@ def batchProcPic(picList, x, y, prefix='proc_'):
 def turnUpDown(img):
     return np.rot90(np.rot90(img))
 
-#扫描后的文档图片，需要
-#1.裁剪，这需要鼠标选择有效区域
-#2.旋转摆正
 
-if True:
-    picFiles=[]
-    examplePic='feng2.jpg'
-    
-    
-    x,y=getXYofValidImage(examplePic)
-    print ("(%d, %d)" % (x,y))
-    
-    r=input("batch?(Y/n)")
-    if 'y'==r.lower():
-        batchProcPic(picFiles, x, y)
-else:
-    for i in range(72):
-        temp_d=2*i+1
-        fileString='proc_%03d.jpg' % temp_d
-        
-        print ("Proc:"+fileString)
-        img=readImage(fileString)
-        img=turnUpDown(img)
-        writeImage(fileString, img)
-    
-
+picFiles=[]
+examplePic='feng2.jpg'
+x=y=0
+prefix="_"
+while True:
+    r=input("Choose Function:(1:measure valid area size, 2:batch process picture, 3:turn picture 180, q:exit)")
+    if r=='1':
+        #通过在图像上选择区域，确定有效区域
+        x,y=getXYofValidImage(examplePic)
+        print ("(%d, %d)" % (x,y))
+    if r=='2':
+        #批量处理
+        if (not x) and (not y):
+            batchProcPic(picFiles, x, y, prefix=prefix)
+    if r=='3':
+        #第1，3，5这样的奇数页是倒置的，需要翻转一下
+        #只对奇数页进行旋转180，奇数页在列表中的下标是偶数
+        i=0
+        while i<len(picFiles):
+            fileString=prefix+picFiles[i]
+            
+            print ("Proc:"+fileString)
+            img=readImage(fileString)
+            img=turnUpDown(img)
+            writeImage(fileString, img)
+            
+            i+=2
+    if r=='q':
+        break
 
