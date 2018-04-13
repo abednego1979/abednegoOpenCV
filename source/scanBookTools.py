@@ -101,7 +101,7 @@ while True:
         print ("(%d, %d)" % (x,y))
     if r=='2':
         #批量处理
-        if (not x) and (not y):
+        if x and y:
             batchProcPic(picFiles, x, y, prefix=prefix)
     if r=='3':
         #第1，3，5这样的奇数页是倒置的，需要翻转一下
