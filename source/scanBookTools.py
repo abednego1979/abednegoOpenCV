@@ -94,7 +94,7 @@ examplePic='feng2.jpg'
 x=y=0
 prefix="_"
 while True:
-    r=input("Choose Function:(1:measure valid area size, 2:batch process picture, 3:turn picture 180, q:exit)")
+    r=input("Choose Function:(1:measure valid area size, 2:batch process picture, 3:turn picture 180, 4:turn all picture 180, q:exit)")
     if r=='1':
         #通过在图像上选择区域，确定有效区域
         x,y=getXYofValidImage(examplePic)
@@ -116,6 +116,18 @@ while True:
             writeImage(fileString, img)
             
             i+=2
+    if r=='4':
+        #对所有的图像进行倒转
+        i=0
+        while i<len(picFiles):
+            fileString=prefix+picFiles[i]
+            
+            print ("Proc:"+fileString)
+            img=readImage(fileString)
+            img=turnUpDown(img)
+            writeImage(fileString, img)
+            
+            i+=1
     if r=='q':
         break
 
