@@ -59,7 +59,8 @@ class myCam():
                 ret,img=self.capture.read()
                 self.savaImage(img)
                 if self.dbgFlag:
-                    print ('.',)
+                    #print ('.',)
+                    pass
             
                 remainNum = self.capNum-1
                 self.period_capPic_exe(remainNum)
@@ -96,11 +97,12 @@ class myCam():
 #mC.setCapInc(1.0)
 #mC.run()
 
+baseDir="."
 #创建5个目录，分别是0,1,2,3,4
 #每次启动就清空他们，并从目录1开始记录，每个目录放一个小时的图片，都放满了就清空最老的目录并重来
 for index in range(5):
-    if not os.path.isdir("./%d" % index):
-        os.mkdir("./%d" % index)
+    if not os.path.isdir(baseDir+"/%d" % index):
+        os.mkdir(baseDir+"/%d" % index)
 
 
 curDirIndex=0
@@ -114,7 +116,7 @@ def del_file(path):
             del_file(path_file)
 
 while True:
-    curDir="./%d" % curDirIndex
+    curDir=baseDir+"/%d" % curDirIndex
     #清空curDir目录
     del_file(curDir)
     
